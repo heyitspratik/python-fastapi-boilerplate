@@ -39,4 +39,6 @@ repos:
           - fastapi>=0.116.1
           - sqlalchemy[asyncio]>=2.0.36
           - redis>=5.2.1
+          - fastapi-utils>=0.8.0
+          - typing-inspect>=0.9.0
         args: [--config-file=pyproject.toml]

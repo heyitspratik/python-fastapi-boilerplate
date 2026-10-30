@@ -69,7 +69,9 @@ app/
 ├── router.py           mounts your routers under /api/v1
 ├── clients/            database/ and redis/ connections
 ├── db/                 models/ (tables) and services/ (queries)
-├── controllers/        route handlers
+├── controllers/        HTTP only: one class-based (@cbv) controller per feature
+├── services/           business logic: one <feature>_service.py class per feature
+├── helpers/            non-business code services reuse: <topic>_helper.py
 ├── schemas/            request/ and response/ models
 ├── constants/          enums and messages
 ├── exceptions/         error classes and handlers
@@ -81,18 +83,29 @@ app/
 
 ## Adding an endpoint
 
-Use `app/controllers/health_controller.py` as the reference pattern.
+Use `app/controllers/health_controller.py` as the reference pattern. Each
+layer has one job, so new code always goes in one of these folders:
 
 1. **Model** (if it needs a table): `app/db/models/<name>.py`, then import it in
    `app/db/models/__init__.py` — Alembic can't see models that aren't imported.
 2. **Schemas:** `app/schemas/request/<name>_request.py` and
    `app/schemas/response/<name>_response.py`.
-3. **Queries:** a service class in `app/db/services/<name>_db_service.py`.
-4. **Controller:** `app/controllers/<name>_controller.py`. Take a session with
-   `DBSession` or Redis with `RedisDep`, and return `BaseResponse[YourResponse]`.
-5. **Mount it** in `app/router.py` (there's a commented example).
-6. **Migrate:** `uv run alembic revision --autogenerate -m "add <name>"`,
+3. **Queries:** a class in `app/db/services/<name>_db_service.py`.
+4. **Business logic:** a class in `app/services/<name>_service.py` that takes
+   the clients it needs in `__init__`. See the example in
+   `app/services/__init__.py`.
+5. **Helpers** (if needed): code that isn't business logic, such as parsing or
+   calling another system, in `app/helpers/<topic>_helper.py`.
+6. **Controller:** a `@cbv` class in `app/controllers/<name>_controller.py`,
+   HTTP only. Each method takes a session with `DBSession` or Redis with
+   `RedisDep`, creates the service, calls it and returns
+   `BaseResponse[YourResponse]`.
+7. **Mount it** in `app/router.py` (there's a commented example).
+8. **Migrate:** `uv run alembic revision --autogenerate -m "add <name>"`,
    then `uv run alembic upgrade head`.
+
+Don't create other top-level folders under `app/` for feature code; pick the
+layer it belongs to instead.
 
 Every successful response has the same shape:
 
